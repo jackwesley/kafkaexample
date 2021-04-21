@@ -17,7 +17,9 @@ namespace Consumer
                 // topic/partitions of interest. By default, offsets are committed
                 // automatically, so in this example, consumption will only start from the
                 // earliest message in the topic 'test-topic' the first time you run the program.
-                AutoOffsetReset = AutoOffsetReset.Earliest
+                AutoOffsetReset = AutoOffsetReset.Earliest,
+                EnableAutoCommit = false
+
             };
 
             using (var c = new ConsumerBuilder<Ignore, string>(conf).Build())
@@ -25,7 +27,8 @@ namespace Consumer
                 c.Subscribe("test-topic");
 
                 var cts = new CancellationTokenSource();
-                Console.CancelKeyPress += (_, e) => {
+                Console.CancelKeyPress += (_, e) =>
+                {
                     e.Cancel = true; // prevent the process from terminating.
                     cts.Cancel();
                 };
@@ -34,9 +37,20 @@ namespace Consumer
                 {
                     while (true)
                     {
+
                         try
                         {
+
                             var cr = c.Consume(cts.Token);
+                            if (cr.Value.Contains("Jack"))
+                            {
+                                Console.WriteLine($"Not commited message '{cr.Value}' at: '{cr.TopicPartitionOffset}'.");
+                                continue;
+                            }
+
+                            c.Commit();
+
+
                             Console.WriteLine($"Consumed message '{cr.Value}' at: '{cr.TopicPartitionOffset}'.");
                         }
                         catch (ConsumeException e)
